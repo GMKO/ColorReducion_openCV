@@ -76,7 +76,26 @@ Mat computeBV(double alpha, double beta, double gamma, Mat input) {
 	}
 		
 	for (j = 0; j < input.cols; j++) {
-		
+		output.at<uchar>(0, j) = 0;
+		output.at<uchar>(output.rows - 1, j) = 0;
+	}
+
+	return output;
+}
+
+Mat computeBH(double alpha, double beta, double gamma, Mat input) {
+
+	Mat output = Mat(input.rows, input.cols, CV_8UC1, double(0));
+	int i, j;
+
+	for (i = 0; i < input.rows; i++) {
+		for (j = 1; j < input.cols; j++)
+			output.at<uchar>(i, j) = optimumModuloDifference(alpha, beta, gamma, input.at<Vec3b>(i, j - 1), input.at<Vec3b>(i, j));
+	}
+
+	for (i = 0; j < input.rows; j++) {
+		output.at<uchar>(i, 0) = 0;
+		output.at<uchar>(i, input.cols - 1) = 0;
 	}
 
 	return output;
@@ -114,8 +133,11 @@ int main(int argc, char** argv)
 
 	Mat G = computeInput(alpha, beta, gamma, input);
 	Mat A = G;
+	Mat BV = computeBV(alpha, beta, gamma, input);
+	Mat BH = computeBH(alpha, beta, gamma, input);
+	Mat BM = A;
 
-	//dispResults(input, inputName, A, "Output.jpg");
+	//dispResults(input, inputName, BV, "Output.jpg");
 
 	return 0;
 }
