@@ -144,70 +144,35 @@ void printValues(Mat input) {
 uchar getGap(int i, int j, Mat A, Mat BH, Mat BV) {
 
 	int diff1, diff2, diff3, diff4;
+	Scalar valA1, valA2, valB1;
 
-	if (i == A.rows - 1) {
-		Scalar valA1 = A.at<uchar>(i, j);
-		Scalar valB1 = BV.at<uchar>(i, j);
-		
-		diff1 = valA1.val[0];
-		diff1 -= valB1.val[0];
-	}
-	else {
-		Scalar valA1 = A.at<uchar>(i, j);
-		Scalar valA2 = A.at<uchar>(i + 1, j);
-		Scalar valB1 = BV.at<uchar>(i + 1, j);
+	valA1 = A.at<uchar>(i, j);
+	valA2 = A.at<uchar>(i + 1, j);
+	valB1 = BV.at<uchar>(i + 1, j);
 
-		diff1 = valA1.val[0] - valA2.val[0];
-		diff1 -= valB1.val[0];
-	}
+	diff1 = valA1.val[0] - valA2.val[0];
+	diff1 -= valB1.val[0];
+	
+	valA1 = A.at<uchar>(i, j);
+	valA2 = A.at<uchar>(i - 1, j);
+	valB1 = BV.at<uchar>(i - 1, j);
 
-	if (i == 0) {
-		Scalar valA1 = A.at<uchar>(i, j);
-		Scalar valB1 = BV.at<uchar>(i, j);
+	diff2 = valA1.val[0] - valA2.val[0];
+	diff2 -= valB1.val[0];
+	
+	valA1 = A.at<uchar>(i, j);
+	valA2 = A.at<uchar>(i, j + 1);
+	valB1 = BH.at<uchar>(i, j + 1);
 
-		diff2 = valA1.val[0];
-		diff2 -= valB1.val[0];
-	}
-	else {
-		Scalar valA1 = A.at<uchar>(i, j);
-		Scalar valA2 = A.at<uchar>(i - 1, j);
-		Scalar valB1 = BV.at<uchar>(i - 1, j);
+	diff3 = valA1.val[0] - valA2.val[0];
+	diff3 -= valB1.val[0];
+	
+	valA1 = A.at<uchar>(i, j);
+	valA2 = A.at<uchar>(i, j - 1);
+	valB1 = BH.at<uchar>(i, j - 1);
 
-		diff2 = valA1.val[0] - valA2.val[0];
-		diff2 -= valB1.val[0];
-	}
-
-	if (j == A.cols - 1) {
-		Scalar valA1 = A.at<uchar>(i, j);
-		Scalar valB1 = BH.at<uchar>(i, j);
-
-		diff3 = valA1.val[0];
-		diff3 -= valB1.val[0];
-	}
-	else {
-		Scalar valA1 = A.at<uchar>(i, j);
-		Scalar valA2 = A.at<uchar>(i, j + 1);
-		Scalar valB1 = BH.at<uchar>(i, j + 1);
-
-		diff3 = valA1.val[0] - valA2.val[0];
-		diff3 -= valB1.val[0];
-	}
-
-	if (j == 0) {
-		Scalar valA1 = A.at<uchar>(i, j);
-		Scalar valB1 = BH.at<uchar>(i, j);
-
-		diff4 = valA1.val[0];
-		diff4 -= valB1.val[0];
-	}
-	else {
-		Scalar valA1 = A.at<uchar>(i, j);
-		Scalar valA2 = A.at<uchar>(i, j - 1);
-		Scalar valB1 = BH.at<uchar>(i, j - 1);
-
-		diff4 = valA1.val[0] - valA2.val[0];
-		diff4 -= valB1.val[0];
-	}
+	diff4 = valA1.val[0] - valA2.val[0];
+	diff4 -= valB1.val[0];
 
 	int result = diff1 + diff2 + diff3 + diff4;
 	uchar diff = (uchar)result;
@@ -233,11 +198,15 @@ int getErrorIndex(Mat A, Mat BH, Mat BV) {
 
 int main(int argc, char** argv)
 {
+	//Need changing
 	double alpha = 0.34;
 	double beta = 0.33;
 	double gamma = 0.33;
-	double q = 0.1;
-	int MOD_RANGE = 255, MAX_ITERATIONS = 5;
+	
+	//Needs changing 
+	double q = 0.01;
+
+	int MOD_RANGE = 255, MAX_ITERATIONS = 37;
 	int iteration, bestErrorIndex;
 	char* inputName = argv[1];
 	Mat input = imread(inputName);
@@ -248,12 +217,14 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
+	//Initialize structures
 	Mat G = computeInput(alpha, beta, gamma, input);
 	Mat A = G.clone();
 	Mat BV = computeBV(alpha, beta, gamma, input);
 	Mat BH = computeBH(alpha, beta, gamma, input);
 	Mat BM = A.clone();
 	
+	//Get the error index
 	bestErrorIndex = getErrorIndex(A, BH, BV);
 	iteration = MAX_ITERATIONS;
 
@@ -263,19 +234,26 @@ int main(int argc, char** argv)
 		int i, j;
 		int errorIndex;
 		
+		//Initialize the accumulator
 		for (i = 0; i <= MOD_RANGE; i++) {
 			ACC[i] = 0;
 		}
 
+		//Store the corrections
 		for (i = 0; i < A.rows; i++) {
 			for (j = 0; j < A.cols; j++) {
 				Scalar value = G.at<uchar>(i, j);
 				int index = value.val[0];
 
-				ACC[index] = getGap(i, j, A, BH, BV);
+				//Needs changing
+				if (i == 0 || j == 0 || i == A.rows -1 || j == A.cols -1)
+					ACC[index] = (uchar) 255;
+				else
+					ACC[index] = getGap(i, j, A, BH, BV);
 			}
 		}
 
+		//Apply the corrections
 		for (i = 0; i < A.rows; i++) {
 			for (j = 0; j < A.cols; j++) {
 				Scalar a, b;
@@ -289,17 +267,22 @@ int main(int argc, char** argv)
 					A.at<uchar>(i, j) = (uchar) 255;
 			}
 		}
-		printValues(A);
+
+		//Get the new error index and check it against the best error index
 		errorIndex = getErrorIndex(A, BH, BV);
+		printf("Error Index: %d Best error index: %d\n", errorIndex, bestErrorIndex);
 		if (errorIndex < bestErrorIndex)
 		{
+			printf("File changed.\n");
 			BM = A.clone();
 			bestErrorIndex = errorIndex;
-		}
 
+		}
+		//dispResults(input, inputName, A, "Output.jpg");
 		iteration--;
 	}
 
+	printValues(BM);
 	dispResults(input, inputName, BM, "Output.jpg");
 
 	return 0;
